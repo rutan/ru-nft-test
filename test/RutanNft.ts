@@ -4,11 +4,11 @@ import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
 
 describe("RutanNft", () => {
   const deployFixture = async () => {
-    const [owner, otherAccount] = await ethers.getSigners();
+    const [admin, owner, otherAccount] = await ethers.getSigners();
     const RutanNft = await ethers.getContractFactory("RutanNft");
-    const rutanNft = await RutanNft.deploy();
+    const rutanNft = await RutanNft.deploy(owner.address);
     await rutanNft.deployed();
-    return { rutanNft, owner, otherAccount };
+    return { rutanNft, admin, owner, otherAccount };
   };
 
   describe("name", () => {
@@ -26,6 +26,13 @@ describe("RutanNft", () => {
     });
   });
 
+  describe("admin", () => {
+    it("Adminのアドレスが取得できること", async () => {
+      const { rutanNft, admin } = await loadFixture(deployFixture);
+      expect(await rutanNft.admin()).to.equal(admin.address);
+    });
+  });
+
   describe("owner", () => {
     it("オーナーのアドレスが取得できること", async () => {
       const { rutanNft, owner } = await loadFixture(deployFixture);
@@ -34,13 +41,25 @@ describe("RutanNft", () => {
   });
 
   describe("transferOwnership", () => {
-    it("オーナーのアドレスが変更できること", async () => {
-      const { rutanNft, otherAccount } = await loadFixture(deployFixture);
-      await rutanNft.transferOwnership(otherAccount.address);
+    it("Adminはオーナーのアドレスが変更できること", async () => {
+      const { rutanNft, admin, otherAccount } = await loadFixture(deployFixture);
+      await rutanNft.connect(admin).transferOwnership(otherAccount.address);
       expect(await rutanNft.owner()).to.equal(otherAccount.address);
     });
 
-    it("ロイヤリティのアドレスが変わること", async () => {
+    it("owner自身はオーナーのアドレスを変更できないこと", async () => {
+      const { rutanNft, owner, otherAccount } = await loadFixture(deployFixture);
+      await expect(rutanNft.connect(owner).transferOwnership(otherAccount.address))
+        .to.be.revertedWith("Adminable: caller is not the admin");
+    });
+
+    it("一般人はオーナーのアドレスを変更できないこと", async () => {
+      const { rutanNft, otherAccount } = await loadFixture(deployFixture);
+      await expect(rutanNft.connect(otherAccount).transferOwnership(otherAccount.address))
+        .to.be.revertedWith("Adminable: caller is not the admin");
+    });
+
+    it("owner変更時にロイヤリティのアドレスも変わること", async () => {
       const { rutanNft, owner, otherAccount } = await loadFixture(
         deployFixture
       );

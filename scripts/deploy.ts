@@ -1,8 +1,11 @@
 import { ethers } from "hardhat";
 
 async function main() {
+  const ownerAddress = process.env.OWNER_ADDRESS || "";
+  if (!ownerAddress) throw "please set process.env.OWNER_ADDRESS";
+
   const RutanNft = await ethers.getContractFactory("RutanNft");
-  const rutanNft = await RutanNft.deploy();
+  const rutanNft = await RutanNft.deploy(ownerAddress);
 
   await rutanNft.deployed();
 
